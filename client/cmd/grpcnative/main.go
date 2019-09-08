@@ -25,27 +25,24 @@ func main() {
 		os.Exit(1)
 	}
 
-	var (
-		err error
-		op  string
-		v   *pb.MathOpReply
-	)
+	a, _ := strconv.ParseFloat(fs.Args()[0], 10)
+	b, _ := strconv.ParseFloat(fs.Args()[1], 10)
+
 	if *grpcAddr == "" {
 		fmt.Fprintf(os.Stderr, "error: no remote address specified\n")
 		os.Exit(1)
 	}
 	conn, err := grpc.Dial(*grpcAddr, grpc.WithInsecure(), grpc.WithTimeout(time.Second))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v", err)
-		os.Exit(1)
-	}
+	checkErr(err)
 	defer conn.Close()
 
 	svc := pb.NewMathClient(conn)
-	a, _ := strconv.ParseFloat(fs.Args()[0], 10)
-	b, _ := strconv.ParseFloat(fs.Args()[1], 10)
 	req := pb.MathOpRequest{A: a, B: b}
 
+	var (
+		op string
+		v  *pb.MathOpReply
+	)
 	switch *method {
 	case "divide":
 		v, err = svc.Divide(context.Background(), &req)
@@ -68,16 +65,11 @@ func main() {
 	case "sum":
 		v, err = svc.Sum(context.Background(), &req)
 		op = "+"
-
 	default:
 		fmt.Fprintf(os.Stderr, "error: invalid method %q\n", *method)
 		os.Exit(1)
 	}
-
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
+	checkErr(err)
 	fmt.Fprintf(os.Stdout, "%f %s %f = %f\n", a, op, b, v.V)
 }
 
@@ -93,5 +85,12 @@ func usageFor(fs *flag.FlagSet, short string) func() {
 		})
 		w.Flush()
 		fmt.Fprintf(os.Stderr, "\n")
+	}
+}
+
+func checkErr(err error) {
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v", err)
+		os.Exit(1)
 	}
 }

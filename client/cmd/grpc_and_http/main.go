@@ -16,6 +16,126 @@ import (
 	"time"
 )
 
+type mathServer interface {
+	Divide(ctx context.Context, a, b float64) (float64, error)
+	Max(ctx context.Context, a, b float64) (float64, error)
+	Min(ctx context.Context, a, b float64) (float64, error)
+	Multiply(ctx context.Context, a, b float64) (float64, error)
+	Pow(ctx context.Context, a, b float64) (float64, error)
+	Subtract(ctx context.Context, a, b float64) (float64, error)
+	Sum(ctx context.Context, a, b float64) (float64, error)
+}
+
+type httpMathServer struct {
+	addr string
+}
+
+func (h httpMathServer) handleMathRequest(method string, ctx context.Context, a, b float64) (float64, error) {
+	req := server.MathOpRequest{
+		A: a,
+		B: b,
+	}
+	j, err := json.Marshal(req)
+	if err != nil {
+		return 0, err
+	}
+	resp, err := http.Post(fmt.Sprintf("http://%s/%s", h.addr, method), "application/json", bytes.NewBuffer(j))
+	checkErr(err)
+	defer resp.Body.Close()
+
+	var m server.MathOpResponse
+	err = json.NewDecoder(resp.Body).Decode(&m)
+	return m.V, err
+}
+
+func (h httpMathServer) Divide(ctx context.Context, a, b float64) (float64, error) {
+	return h.handleMathRequest("divide", ctx, a, b)
+}
+
+func (h httpMathServer) Max(ctx context.Context, a, b float64) (float64, error) {
+	return h.handleMathRequest("max", ctx, a, b)
+}
+
+func (h httpMathServer) Min(ctx context.Context, a, b float64) (float64, error) {
+	return h.handleMathRequest("min", ctx, a, b)
+}
+
+func (h httpMathServer) Multiply(ctx context.Context, a, b float64) (float64, error) {
+	return h.handleMathRequest("multiply", ctx, a, b)
+}
+
+func (h httpMathServer) Pow(ctx context.Context, a, b float64) (float64, error) {
+	return h.handleMathRequest("pow", ctx, a, b)
+}
+
+func (h httpMathServer) Subtract(ctx context.Context, a, b float64) (float64, error) {
+	return h.handleMathRequest("subtract", ctx, a, b)
+}
+
+func (h httpMathServer) Sum(ctx context.Context, a, b float64) (float64, error) {
+	return h.handleMathRequest("sum", ctx, a, b)
+}
+
+type grpcMathServer struct {
+	g pb.MathClient
+}
+
+func (g grpcMathServer) Divide(ctx context.Context, a, b float64) (float64, error) {
+	r, err := g.g.Divide(ctx, &pb.MathOpRequest{
+		A: a,
+		B: b,
+	})
+	return r.V, err
+}
+
+func (g grpcMathServer) Max(ctx context.Context, a, b float64) (float64, error) {
+	r, err := g.g.Max(ctx, &pb.MathOpRequest{
+		A: a,
+		B: b,
+	})
+	return r.V, err
+}
+
+func (g grpcMathServer) Min(ctx context.Context, a, b float64) (float64, error) {
+	r, err := g.g.Min(ctx, &pb.MathOpRequest{
+		A: a,
+		B: b,
+	})
+	return r.V, err
+}
+
+func (g grpcMathServer) Multiply(ctx context.Context, a, b float64) (float64, error) {
+	r, err := g.g.Multiply(ctx, &pb.MathOpRequest{
+		A: a,
+		B: b,
+	})
+	return r.V, err
+}
+
+func (g grpcMathServer) Pow(ctx context.Context, a, b float64) (float64, error) {
+	r, err := g.g.Pow(ctx, &pb.MathOpRequest{
+		A: a,
+		B: b,
+	})
+	return r.V, err
+}
+
+func (g grpcMathServer) Subtract(ctx context.Context, a, b float64) (float64, error) {
+	r, err := g.g.Subtract(ctx, &pb.MathOpRequest{
+		A: a,
+		B: b,
+	})
+	return r.V, err
+}
+
+func (g grpcMathServer) Sum(ctx context.Context, a, b float64) (float64, error) {
+	r, err := g.g.Sum(ctx, &pb.MathOpRequest{
+		A: a,
+		B: b,
+	})
+	return r.V, err
+}
+
 func main() {
 	fs := flag.NewFlagSet("mathcli", flag.ExitOnError)
 	var (
@@ -32,63 +152,52 @@ func main() {
 
 	a, _ := strconv.ParseFloat(fs.Args()[0], 10)
 	b, _ := strconv.ParseFloat(fs.Args()[1], 10)
-	var result float64
 
+	var m mathServer
 	if *grpcAddr != "" {
 		conn, err := grpc.Dial(*grpcAddr, grpc.WithInsecure(), grpc.WithTimeout(time.Second))
 		checkErr(err)
 		defer conn.Close()
 
 		svc := pb.NewMathClient(conn)
-		req := pb.MathOpRequest{A: a, B: b}
-
-		var resp *pb.MathOpReply
-		switch *method {
-		case "divide":
-			resp, err = svc.Divide(context.Background(), &req)
-		case "max":
-			resp, err = svc.Max(context.Background(), &req)
-		case "min":
-			resp, err = svc.Min(context.Background(), &req)
-		case "multiply":
-			resp, err = svc.Multiply(context.Background(), &req)
-		case "pow":
-			resp, err = svc.Pow(context.Background(), &req)
-		case "subtract":
-			resp, err = svc.Subtract(context.Background(), &req)
-		case "sum":
-			resp, err = svc.Sum(context.Background(), &req)
-		default:
-			fmt.Fprintf(os.Stderr, "error: invalid method %q\n", *method)
-			os.Exit(1)
-		}
-		checkErr(err)
-
-		result = resp.V
+		m = grpcMathServer{g: svc}
 	} else if *httpAddr != "" {
-		req := server.MathOpRequest{
-			A: a,
-			B: b,
-		}
-		b, err := json.Marshal(req)
-		if err != nil {
-			panic(err)
-		}
-		resp, err := http.Post(fmt.Sprintf("http://%s/%s", *httpAddr, *method), "application/json", bytes.NewBuffer(b))
-		checkErr(err)
-		defer resp.Body.Close()
-
-		var m server.MathOpResponse
-		err = json.NewDecoder(resp.Body).Decode(&m)
-		checkErr(err)
-
-		result = m.V
-	} else {
-		fmt.Fprintf(os.Stderr, "error: no remote address specified\n")
-		os.Exit(1)
+		m = httpMathServer{addr: *httpAddr}
 	}
 
-	printResult(*method, a, b, result)
+	var (
+		err  error
+		op   string
+		resp float64
+	)
+	switch *method {
+	case "divide":
+		resp, err = m.Divide(context.Background(), a, b)
+		op = "/"
+	case "max":
+		resp, err = m.Max(context.Background(), a, b)
+		op = "max"
+	case "min":
+		resp, err = m.Min(context.Background(), a, b)
+		op = "min"
+	case "multiply":
+		resp, err = m.Multiply(context.Background(), a, b)
+		op = "*"
+	case "pow":
+		resp, err = m.Pow(context.Background(), a, b)
+		op = "^"
+	case "subtract":
+		resp, err = m.Subtract(context.Background(), a, b)
+		op = "-"
+	case "sum":
+		resp, err = m.Sum(context.Background(), a, b)
+		op = "+"
+	default:
+		fmt.Fprintf(os.Stderr, "error: invalid method %q\n", *method)
+		os.Exit(1)
+	}
+	checkErr(err)
+	fmt.Fprintf(os.Stdout, "%f %s %f = %f\n", a, op, b, resp)
 }
 
 func usageFor(fs *flag.FlagSet, short string) func() {
@@ -104,31 +213,6 @@ func usageFor(fs *flag.FlagSet, short string) func() {
 		w.Flush()
 		fmt.Fprintf(os.Stderr, "\n")
 	}
-}
-
-func printResult(method string, a, b, v float64) {
-	var op string
-	switch method {
-	case "divide":
-		op = "/"
-	case "max":
-		op = "max"
-	case "min":
-		op = "min"
-	case "multiply":
-		op = "*"
-	case "pow":
-		op = "^"
-	case "subtract":
-		op = "-"
-	case "sum":
-		op = "+"
-	default:
-		fmt.Fprintf(os.Stderr, "error: invalid method %q\n", method)
-		os.Exit(1)
-	}
-
-	fmt.Fprintf(os.Stdout, "%f %s %f = %f\n", a, op, b, v)
 }
 
 func checkErr(err error) {

@@ -28,8 +28,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	// This is a demonstration client, which supports multiple transports.
-	// Your clients will probably just define and stick with 1 transport.
+	a, _ := strconv.ParseFloat(fs.Args()[0], 10)
+	b, _ := strconv.ParseFloat(fs.Args()[1], 10)
+
 	var (
 		svc mathservice.Service
 		err error
@@ -40,23 +41,14 @@ func main() {
 		svc, err = mathtransport.NewHTTPClient(*httpAddr, log.NewNopLogger())
 	} else if *grpcAddr != "" {
 		conn, err := grpc.Dial(*grpcAddr, grpc.WithInsecure(), grpc.WithTimeout(time.Second))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v", err)
-			os.Exit(1)
-		}
+		checkErr(err)
 		defer conn.Close()
 		svc = mathtransport.NewGRPCClient(conn, log.NewNopLogger())
 	} else {
 		fmt.Fprintf(os.Stderr, "error: no remote address specified\n")
 		os.Exit(1)
 	}
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-
-	a, _ := strconv.ParseFloat(fs.Args()[0], 10)
-	b, _ := strconv.ParseFloat(fs.Args()[1], 10)
+	checkErr(err)
 
 	switch *method {
 	case "divide":
@@ -80,16 +72,11 @@ func main() {
 	case "sum":
 		v, err = svc.Sum(context.Background(), a, b)
 		op = "+"
-
 	default:
 		fmt.Fprintf(os.Stderr, "error: invalid method %q\n", *method)
 		os.Exit(1)
 	}
-
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
+	checkErr(err)
 	fmt.Fprintf(os.Stdout, "%f %s %f = %f\n", a, op, b, v)
 }
 
@@ -105,5 +92,12 @@ func usageFor(fs *flag.FlagSet, short string) func() {
 		})
 		w.Flush()
 		fmt.Fprintf(os.Stderr, "\n")
+	}
+}
+
+func checkErr(err error) {
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v", err)
+		os.Exit(1)
 	}
 }
