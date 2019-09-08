@@ -3,6 +3,7 @@ package mathservice
 import (
 	"context"
 	"errors"
+	"github.com/go-kit/kit/metrics"
 	"math"
 
 	"github.com/go-kit/kit/log"
@@ -27,11 +28,11 @@ type Service interface {
 }
 
 // New returns a basic Service with all of the expected middlewares wired in.
-func New(logger log.Logger) Service {
+func New(duration metrics.Histogram, logger log.Logger) Service {
 	var svc Service
 	{
 		svc = NewBasicService()
-		svc = LoggingMiddleware(logger)(svc)
+		svc = ObservabilityMiddleware(duration, logger)(svc)
 	}
 	return svc
 }

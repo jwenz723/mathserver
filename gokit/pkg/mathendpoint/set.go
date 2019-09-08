@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/metrics"
 	"github.com/jwenz723/mathserver/gokit/pkg/mathservice"
 )
 
@@ -23,58 +22,15 @@ type Set struct {
 
 // New returns a Set that wraps the provided server, and wires in all of the
 // expected endpoint middlewares via the various parameters.
-func New(svc mathservice.Service, logger log.Logger, duration metrics.Histogram) Set {
-	var divideEndpoint endpoint.Endpoint
-	{
-		divideEndpoint = MakeDivideEndpoint(svc)
-		divideEndpoint = LoggingMiddleware(log.With(logger, "method", "Divide"))(divideEndpoint)
-		divideEndpoint = InstrumentingMiddleware(duration.With("method", "Divide"))(divideEndpoint)
-	}
-	var maxEndpoint endpoint.Endpoint
-	{
-		maxEndpoint = MakeMaxEndpoint(svc)
-		maxEndpoint = LoggingMiddleware(log.With(logger, "method", "Max"))(maxEndpoint)
-		maxEndpoint = InstrumentingMiddleware(duration.With("method", "Max"))(maxEndpoint)
-	}
-	var minEndpoint endpoint.Endpoint
-	{
-		minEndpoint = MakeMinEndpoint(svc)
-		minEndpoint = LoggingMiddleware(log.With(logger, "method", "Min"))(minEndpoint)
-		minEndpoint = InstrumentingMiddleware(duration.With("method", "Min"))(minEndpoint)
-	}
-	var multiplyEndpoint endpoint.Endpoint
-	{
-		multiplyEndpoint = MakeMultiplyEndpoint(svc)
-		multiplyEndpoint = LoggingMiddleware(log.With(logger, "method", "Multiply"))(multiplyEndpoint)
-		multiplyEndpoint = InstrumentingMiddleware(duration.With("method", "Multiply"))(multiplyEndpoint)
-	}
-	var powEndpoint endpoint.Endpoint
-	{
-		powEndpoint = MakePowEndpoint(svc)
-		powEndpoint = LoggingMiddleware(log.With(logger, "method", "Pow"))(powEndpoint)
-		powEndpoint = InstrumentingMiddleware(duration.With("method", "Pow"))(powEndpoint)
-	}
-	var subtractEndpoint endpoint.Endpoint
-	{
-		subtractEndpoint = MakeSubtractEndpoint(svc)
-		subtractEndpoint = LoggingMiddleware(log.With(logger, "method", "Subtract"))(subtractEndpoint)
-		subtractEndpoint = InstrumentingMiddleware(duration.With("method", "Subtract"))(subtractEndpoint)
-	}
-	var sumEndpoint endpoint.Endpoint
-	{
-		sumEndpoint = MakeSumEndpoint(svc)
-		sumEndpoint = LoggingMiddleware(log.With(logger, "method", "Sum"))(sumEndpoint)
-		sumEndpoint = InstrumentingMiddleware(duration.With("method", "Sum"))(sumEndpoint)
-	}
-
+func New(svc mathservice.Service, logger log.Logger) Set {
 	return Set{
-		DivideEndpoint:   divideEndpoint,
-		MaxEndpoint:      maxEndpoint,
-		MinEndpoint:      minEndpoint,
-		MultiplyEndpoint: multiplyEndpoint,
-		PowEndpoint:      powEndpoint,
-		SubtractEndpoint: subtractEndpoint,
-		SumEndpoint:      sumEndpoint,
+		DivideEndpoint:   MakeDivideEndpoint(svc),
+		MaxEndpoint:      MakeMaxEndpoint(svc),
+		MinEndpoint:      MakeMinEndpoint(svc),
+		MultiplyEndpoint: MakeMultiplyEndpoint(svc),
+		PowEndpoint:      MakePowEndpoint(svc),
+		SubtractEndpoint: MakeSubtractEndpoint(svc),
+		SumEndpoint:      MakeSumEndpoint(svc),
 	}
 }
 

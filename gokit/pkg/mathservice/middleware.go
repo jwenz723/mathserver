@@ -2,70 +2,92 @@ package mathservice
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics"
+	"time"
 )
 
-// Middleware describes a service (as opposed to endpoint) middleware.
 type Middleware func(Service) Service
 
-// LoggingMiddleware takes a logger as a dependency
-// and returns a ServiceMiddleware.
-func LoggingMiddleware(logger log.Logger) Middleware {
+// ObservabilityMiddleware implements both logging and prometheus metrics for each Service method
+func ObservabilityMiddleware(duration metrics.Histogram, logger log.Logger) Middleware {
 	return func(next Service) Service {
-		return loggingMiddleware{logger, next}
+		return observabilityMiddleware{duration,logger, next}
 	}
 }
 
-type loggingMiddleware struct {
+type observabilityMiddleware struct {
+	duration metrics.Histogram
 	logger log.Logger
 	next   Service
 }
 
-func (mw loggingMiddleware) Divide(ctx context.Context, a, b float64) (v float64, err error) {
-	defer func() {
-		mw.logger.Log("method", "Divide", "a", a, "b", b, "v", v, "err", err)
-	}()
+func (mw observabilityMiddleware) observeMethodExecution(ctx context.Context, method string, a, b, v float64, begin time.Time, err error) {
+	duration := time.Since(begin)
+
+	mw.logger.Log("msg", "method executed",
+		"method", method,
+		"a", a,
+		"b", b,
+		"v", v,
+		"duration", duration,
+		"err", err)
+	mw.duration.With("method", method, "success", fmt.Sprint(err == nil)).Observe(duration.Seconds())
+}
+
+func (mw observabilityMiddleware) Divide(ctx context.Context, a, b float64) (v float64, err error) {
+	defer func(begin time.Time) {
+		m := "Divide"
+		mw.observeMethodExecution(ctx, m, a, b, v, begin, err)
+	}(time.Now())
 	return mw.next.Divide(ctx, a, b)
 }
 
-func (mw loggingMiddleware) Max(ctx context.Context, a, b float64) (v float64, err error) {
-	defer func() {
-		mw.logger.Log("method", "Max", "a", a, "b", b, "v", v, "err", err)
-	}()
+func (mw observabilityMiddleware) Max(ctx context.Context, a, b float64) (v float64, err error) {
+	defer func(begin time.Time) {
+		m := "Max"
+		mw.observeMethodExecution(ctx, m, a, b, v, begin, err)
+	}(time.Now())
 	return mw.next.Max(ctx, a, b)
 }
 
-func (mw loggingMiddleware) Min(ctx context.Context, a, b float64) (v float64, err error) {
-	defer func() {
-		mw.logger.Log("method", "Min", "a", a, "b", b, "v", v, "err", err)
-	}()
+func (mw observabilityMiddleware) Min(ctx context.Context, a, b float64) (v float64, err error) {
+	defer func(begin time.Time) {
+		m := "Min"
+		mw.observeMethodExecution(ctx, m, a, b, v, begin, err)
+	}(time.Now())
 	return mw.next.Min(ctx, a, b)
 }
 
-func (mw loggingMiddleware) Multiply(ctx context.Context, a, b float64) (v float64, err error) {
-	defer func() {
-		mw.logger.Log("method", "Multiply", "a", a, "b", b, "v", v, "err", err)
-	}()
+func (mw observabilityMiddleware) Multiply(ctx context.Context, a, b float64) (v float64, err error) {
+	defer func(begin time.Time) {
+		m := "Multiply"
+		mw.observeMethodExecution(ctx, m, a, b, v, begin, err)
+	}(time.Now())
 	return mw.next.Multiply(ctx, a, b)
 }
 
-func (mw loggingMiddleware) Pow(ctx context.Context, a, b float64) (v float64, err error) {
-	defer func() {
-		mw.logger.Log("method", "Pow", "a", a, "b", b, "v", v, "err", err)
-	}()
+func (mw observabilityMiddleware) Pow(ctx context.Context, a, b float64) (v float64, err error) {
+	defer func(begin time.Time) {
+		m := "Pow"
+		mw.observeMethodExecution(ctx, m, a, b, v, begin, err)
+	}(time.Now())
 	return mw.next.Pow(ctx, a, b)
 }
 
-func (mw loggingMiddleware) Subtract(ctx context.Context, a, b float64) (v float64, err error) {
-	defer func() {
-		mw.logger.Log("method", "Subtract", "a", a, "b", b, "v", v, "err", err)
-	}()
+func (mw observabilityMiddleware) Subtract(ctx context.Context, a, b float64) (v float64, err error) {
+	defer func(begin time.Time) {
+		m := "Subtract"
+		mw.observeMethodExecution(ctx, m, a, b, v, begin, err)
+	}(time.Now())
 	return mw.next.Subtract(ctx, a, b)
 }
 
-func (mw loggingMiddleware) Sum(ctx context.Context, a, b float64) (v float64, err error) {
-	defer func() {
-		mw.logger.Log("method", "Sum", "a", a, "b", b, "v", v, "err", err)
-	}()
+func (mw observabilityMiddleware) Sum(ctx context.Context, a, b float64) (v float64, err error) {
+	defer func(begin time.Time) {
+		m := "Sum"
+		mw.observeMethodExecution(ctx, m, a, b, v, begin, err)
+	}(time.Now())
 	return mw.next.Sum(ctx, a, b)
 }

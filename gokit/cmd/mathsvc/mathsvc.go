@@ -3,30 +3,26 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/jwenz723/mathserver/pb"
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/metrics/prometheus"
+	kitgrpc "github.com/go-kit/kit/transport/grpc"
 	"github.com/jwenz723/mathserver/gokit/pkg/mathendpoint"
 	"github.com/jwenz723/mathserver/gokit/pkg/mathservice"
 	"github.com/jwenz723/mathserver/gokit/pkg/mathtransport"
+	"github.com/jwenz723/mathserver/pb"
+	"github.com/oklog/oklog/pkg/group"
+	stdprometheus "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"google.golang.org/grpc"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"text/tabwriter"
-	"github.com/oklog/oklog/pkg/group"
-	stdprometheus "github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"google.golang.org/grpc"
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/metrics"
-	"github.com/go-kit/kit/metrics/prometheus"
-	kitgrpc "github.com/go-kit/kit/transport/grpc"
 )
 
 func main() {
-	// Define our flags. Your service probably won't need to bind listeners for
-	// *all* supported transports, or support both Zipkin and LightStep, and so
-	// on, but we do it here for demonstration purposes.
 	fs := flag.NewFlagSet("mathsvc", flag.ExitOnError)
 	var (
 		debugAddr      = fs.String("debug.addr", ":8080", "Debug and metrics listen address")
@@ -36,7 +32,6 @@ func main() {
 	fs.Usage = usageFor(fs, os.Args[0]+" [flags]")
 	fs.Parse(os.Args[1:])
 
-	// Create a single logger, which we'll use and give to other components.
 	var logger log.Logger
 	{
 		logger = log.NewLogfmtLogger(os.Stderr)
@@ -44,36 +39,23 @@ func main() {
 		logger = log.With(logger, "caller", log.DefaultCaller)
 	}
 
-	var duration metrics.Histogram
-	{
-		// Endpoint-level metrics.
-		duration = prometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
-			Namespace: "example",
-			Subsystem: "mathsvc",
-			Name:      "request_duration_seconds",
-			Help:      "Request duration in seconds.",
-		}, []string{"method", "success"})
-	}
-	http.DefaultServeMux.Handle("/metrics", promhttp.Handler())
+	duration := prometheus.NewSummaryFrom(stdprometheus.SummaryOpts{
+		Namespace: "example",
+		Subsystem: "mathsvc",
+		Name:      "request_duration_seconds",
+		Help:      "Request duration in seconds.",
+	}, []string{"method", "success"})
 
-	// Build the layers of the service "onion" from the inside out. First, the
-	// business logic service; then, the set of endpoints that wrap the service;
-	// and finally, a series of concrete transport adapters. The adapters, like
-	// the HTTP handler or the gRPC server, are the bridge between Go kit and
-	// the interfaces that the transports expect. Note that we're not binding
-	// them to ports or anything yet; we'll do that next.
 	var (
-		service        = mathservice.New(logger)
-		endpoints      = mathendpoint.New(service, logger, duration)
+		service        = mathservice.New(duration, logger)
+		endpoints      = mathendpoint.New(service, logger)
 		httpHandler    = mathtransport.NewHTTPHandler(endpoints, logger)
 		grpcServer     = mathtransport.NewGRPCServer(endpoints, logger)
 	)
 
 	var g group.Group
 	{
-		// The debug listener mounts the http.DefaultServeMux, and serves up
-		// stuff like the Prometheus metrics route, the Go debug and profiling
-		// routes, and so on.
+		http.DefaultServeMux.Handle("/metrics", promhttp.Handler())
 		debugListener, err := net.Listen("tcp", *debugAddr)
 		if err != nil {
 			logger.Log("transport", "debug/HTTP", "during", "Listen", "err", err)

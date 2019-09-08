@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -24,7 +23,7 @@ func NewHttpRouter(svc mathservice.Service, logger *zap.Logger) *mux.Router {
 		svc:    svc,
 	}
 	s.routes()
-	s.addMiddlewares()
+	//s.addMiddlewares()
 	return s.router
 }
 
@@ -62,19 +61,19 @@ func (s *httpServer) mathOpHandlerFunc() http.HandlerFunc {
 		var v float64
 		switch r.URL.Path {
 		case "/divide":
-			v, err = s.svc.Divide(context.TODO(), req.A, req.B)
+			v, err = s.svc.Divide(r.Context(), req.A, req.B)
 		case "/max":
-			v, err = s.svc.Max(context.TODO(), req.A, req.B)
+			v, err = s.svc.Max(r.Context(), req.A, req.B)
 		case "/min":
-			v, err = s.svc.Min(context.TODO(), req.A, req.B)
+			v, err = s.svc.Min(r.Context(), req.A, req.B)
 		case "/multiply":
-			v, err = s.svc.Multiply(context.TODO(), req.A, req.B)
+			v, err = s.svc.Multiply(r.Context(), req.A, req.B)
 		case "/pow":
-			v, err = s.svc.Pow(context.TODO(), req.A, req.B)
+			v, err = s.svc.Pow(r.Context(), req.A, req.B)
 		case "/subtract":
-			v, err = s.svc.Subtract(context.TODO(), req.A, req.B)
+			v, err = s.svc.Subtract(r.Context(), req.A, req.B)
 		case "/sum":
-			v, err = s.svc.Sum(context.TODO(), req.A, req.B)
+			v, err = s.svc.Sum(r.Context(), req.A, req.B)
 		}
 
 		writeResponse(w, v, err)
