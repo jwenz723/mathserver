@@ -11,8 +11,6 @@ import (
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/jwenz723/mathserver/gokit/pkg/mathendpoint"
 	"github.com/jwenz723/mathserver/gokit/pkg/mathservice"
-	stdopentracing "github.com/opentracing/opentracing-go"
-	stdzipkin "github.com/openzipkin/zipkin-go"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -28,6 +26,42 @@ func NewHTTPHandler(endpoints mathendpoint.Set, logger log.Logger) http.Handler 
 	}
 
 	m := http.NewServeMux()
+	m.Handle("/divide", httptransport.NewServer(
+		endpoints.DivideEndpoint,
+		decodeHTTPMathOpRequest,
+		encodeHTTPGenericResponse,
+		options...,
+	))
+	m.Handle("/max", httptransport.NewServer(
+		endpoints.MaxEndpoint,
+		decodeHTTPMathOpRequest,
+		encodeHTTPGenericResponse,
+		options...,
+	))
+	m.Handle("/min", httptransport.NewServer(
+		endpoints.MinEndpoint,
+		decodeHTTPMathOpRequest,
+		encodeHTTPGenericResponse,
+		options...,
+	))
+	m.Handle("/multiply", httptransport.NewServer(
+		endpoints.MultiplyEndpoint,
+		decodeHTTPMathOpRequest,
+		encodeHTTPGenericResponse,
+		options...,
+	))
+	m.Handle("/pow", httptransport.NewServer(
+		endpoints.PowEndpoint,
+		decodeHTTPMathOpRequest,
+		encodeHTTPGenericResponse,
+		options...,
+	))
+	m.Handle("/subtract", httptransport.NewServer(
+		endpoints.SubtractEndpoint,
+		decodeHTTPMathOpRequest,
+		encodeHTTPGenericResponse,
+		options...,
+	))
 	m.Handle("/sum", httptransport.NewServer(
 		endpoints.SumEndpoint,
 		decodeHTTPMathOpRequest,
@@ -41,7 +75,7 @@ func NewHTTPHandler(endpoints mathendpoint.Set, logger log.Logger) http.Handler 
 // remote instance. We expect instance to come from a service discovery system,
 // so likely of the form "host:port". We bake-in certain middlewares,
 // implementing the client library pattern.
-func NewHTTPClient(instance string, otTracer stdopentracing.Tracer, zipkinTracer *stdzipkin.Tracer, logger log.Logger) (mathservice.Service, error) {
+func NewHTTPClient(instance string, logger log.Logger) (mathservice.Service, error) {
 	// Quickly sanitize the instance string.
 	if !strings.HasPrefix(instance, "http") {
 		instance = "http://" + instance
@@ -125,7 +159,7 @@ func NewHTTPClient(instance string, otTracer stdopentracing.Tracer, zipkinTracer
 		MultiplyEndpoint: multiplyEndpoint,
 		PowEndpoint:      powEndpoint,
 		SubtractEndpoint: subtractEndpoint,
-		SumEndpoint:    sumEndpoint,
+		SumEndpoint:      sumEndpoint,
 	}, nil
 }
 

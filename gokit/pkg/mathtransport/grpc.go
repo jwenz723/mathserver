@@ -136,6 +136,72 @@ func (s *grpcServer) Sum(ctx context.Context, req *pb.MathOpRequest) (*pb.MathOp
 // eventually closing the underlying transport. We bake-in certain middlewares,
 // implementing the client library pattern.
 func NewGRPCClient(conn *grpc.ClientConn, logger log.Logger) mathservice.Service {
+	var divideEndpoint endpoint.Endpoint
+	{
+		divideEndpoint = grpctransport.NewClient(
+			conn,
+			"pb.Math",
+			"Divide",
+			encodeGRPCMathOpRequest,
+			decodeGRPCMathOpResponse,
+			pb.MathOpReply{},
+		).Endpoint()
+	}
+	var maxEndpoint endpoint.Endpoint
+	{
+		maxEndpoint = grpctransport.NewClient(
+			conn,
+			"pb.Math",
+			"Max",
+			encodeGRPCMathOpRequest,
+			decodeGRPCMathOpResponse,
+			pb.MathOpReply{},
+		).Endpoint()
+	}
+	var minEndpoint endpoint.Endpoint
+	{
+		minEndpoint = grpctransport.NewClient(
+			conn,
+			"pb.Math",
+			"Min",
+			encodeGRPCMathOpRequest,
+			decodeGRPCMathOpResponse,
+			pb.MathOpReply{},
+		).Endpoint()
+	}
+	var multiplyEndpoint endpoint.Endpoint
+	{
+		multiplyEndpoint = grpctransport.NewClient(
+			conn,
+			"pb.Math",
+			"Multiply",
+			encodeGRPCMathOpRequest,
+			decodeGRPCMathOpResponse,
+			pb.MathOpReply{},
+		).Endpoint()
+	}
+	var powEndpoint endpoint.Endpoint
+	{
+		powEndpoint = grpctransport.NewClient(
+			conn,
+			"pb.Math",
+			"Pow",
+			encodeGRPCMathOpRequest,
+			decodeGRPCMathOpResponse,
+			pb.MathOpReply{},
+		).Endpoint()
+	}
+	var subtractEndpoint endpoint.Endpoint
+	{
+		subtractEndpoint = grpctransport.NewClient(
+			conn,
+			"pb.Math",
+			"Subtract",
+			encodeGRPCMathOpRequest,
+			decodeGRPCMathOpResponse,
+			pb.MathOpReply{},
+		).Endpoint()
+	}
 	var sumEndpoint endpoint.Endpoint
 	{
 		sumEndpoint = grpctransport.NewClient(
@@ -152,7 +218,13 @@ func NewGRPCClient(conn *grpc.ClientConn, logger log.Logger) mathservice.Service
 	// endpoint.Set implementing the Service methods. That's just a simple bit
 	// of glue code.
 	return mathendpoint.Set{
-		SumEndpoint:    sumEndpoint,
+		DivideEndpoint:   divideEndpoint,
+		MaxEndpoint:      maxEndpoint,
+		MinEndpoint:      minEndpoint,
+		MultiplyEndpoint: multiplyEndpoint,
+		PowEndpoint:      powEndpoint,
+		SubtractEndpoint: subtractEndpoint,
+		SumEndpoint:      sumEndpoint,
 	}
 }
 
