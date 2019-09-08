@@ -28,7 +28,7 @@ func main() {
 	fs := flag.NewFlagSet("mathsvc", flag.ExitOnError)
 	var (
 		debugAddr      = fs.String("debug.addr", ":8080", "Debug and metrics listen address")
-		//httpAddr       = fs.String("http-addr", ":8081", "HTTP listen address")
+		httpAddr       = fs.String("http-addr", ":8081", "HTTP listen address")
 		grpcAddr       = fs.String("grpc-addr", ":8082", "gRPC listen address")
 	)
 	fs.Usage = usageFor(fs, os.Args[0]+" [flags]")
@@ -38,22 +38,10 @@ func main() {
 
 	http.DefaultServeMux.Handle("/metrics", promhttp.Handler())
 
-	// Build the layers of the service "onion" from the inside out. First, the
-	// business logic service; then, the set of endpoints that wrap the service;
-	// and finally, a series of concrete transport adapters. The adapters, like
-	// the HTTP handler or the gRPC server, are the bridge between Go kit and
-	// the interfaces that the transports expect. Note that we're not binding
-	// them to ports or anything yet; we'll do that next.
-	//var (
-	//	service        = mathservice.New(logger)
-	//	endpoints      = mathendpoint.New(service, logger, duration)
-	//	httpHandler    = mathtransport.NewHTTPHandler(endpoints, logger)
-	//	grpcServer     = mathtransport.NewGRPCServer(endpoints, logger)
-	//)
-
 	var (
 		service = mathservice.NewBasicService()
-		grpcSvc = server.New(service)
+		grpcSvc = server.NewGrpcServer(service)
+		httpSvc = server.NewHttpServer(service)
 	)
 
 	var g group.Group
@@ -78,22 +66,26 @@ func main() {
 			debugListener.Close()
 		})
 	}
-	//{
-	//	// The HTTP listener mounts the Go kit HTTP handler we created.
-	//	httpListener, err := net.Listen("tcp", *httpAddr)
-	//	if err != nil {
-	//		logger.Log("transport", "HTTP", "during", "Listen", "err", err)
-	//		os.Exit(1)
-	//	}
-	//	g.Add(func() error {
-	//		logger.Log("transport", "HTTP", "addr", *httpAddr)
-	//		return http.Serve(httpListener, httpHandler)
-	//	}, func(error) {
-	//		httpListener.Close()
-	//	})
-	//}
 	{
-		logger.Info("starting grpcSvc listener", zap.String("addr", *grpcAddr))
+		// The HTTP listener mounts the Go kit HTTP handler we created.
+		httpListener, err := net.Listen("tcp", *httpAddr)
+		if err != nil {
+			logger.Error("failed to start httpSvc listener",
+				zap.Error(err))
+			os.Exit(1)
+		}
+
+		g.Add(func() error {
+			logger.Info("starting httpSvc listener",
+				zap.String("addr", *httpAddr))
+			return http.Serve(httpListener, httpSvc.Router())
+		}, func(error) {
+			httpListener.Close()
+		})
+	}
+	{
+		logger.Info("starting grpcSvc listener",
+			zap.String("addr", *grpcAddr))
 		lis, err := net.Listen("tcp", *grpcAddr)
 		if err != nil {
 			logger.Error("failed to start grpcSvc listener", zap.Error(err))
