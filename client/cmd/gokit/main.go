@@ -17,9 +17,9 @@ import (
 func main() {
 	fs := flag.NewFlagSet("mathcli", flag.ExitOnError)
 	var (
-		httpAddr       = fs.String("http-addr", "", "HTTP address of addsvc")
-		grpcAddr       = fs.String("grpc-addr", "", "gRPC address of addsvc")
-		method         = fs.String("method", "sum", "divide, min, max, multiply, pow, subtract, sum")
+		grpcAddr = fs.String("grpc-addr", "", "gRPC address of addsvc")
+		httpAddr = fs.String("http-addr", "", "HTTP address of addsvc")
+		method   = fs.String("method", "sum", "divide, min, max, multiply, pow, subtract, sum")
 	)
 	fs.Usage = usageFor(fs, os.Args[0]+" [flags] <a> <b>")
 	fs.Parse(os.Args[1:])

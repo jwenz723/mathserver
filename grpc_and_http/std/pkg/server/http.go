@@ -7,7 +7,6 @@ import (
 	mathservice2 "github.com/jwenz723/mathserver/grpc_and_http/std/pkg/mathservice"
 	"go.uber.org/zap"
 	"net/http"
-	"time"
 )
 
 type httpServer struct {
@@ -23,19 +22,11 @@ func NewHttpRouter(svc mathservice2.Service, logger *zap.Logger) *mux.Router {
 		svc:    svc,
 	}
 	s.routes()
-	//s.addMiddlewares()
 	return s.router
 }
 
 func (s *httpServer) routes() {
 	s.router.Methods("POST").PathPrefix("/").HandlerFunc(s.mathOpHandlerFunc())
-}
-
-func (s *httpServer) addMiddlewares() {
-	lmw := loggingMiddleware{
-		logger: s.logger,
-	}
-	s.router.Use(lmw.Middleware)
 }
 
 // MathOpRequest collects the request parameters for the math methods.
@@ -45,8 +36,8 @@ type MathOpRequest struct {
 
 // MathOpResponse collects the response values for the math methods.
 type MathOpResponse struct {
-	V   float64   `json:"v"`
-	Err error `json:"-"`
+	V   float64 `json:"v"`
+	Err error   `json:"-"`
 }
 
 func (s *httpServer) mathOpHandlerFunc() http.HandlerFunc {
@@ -100,18 +91,4 @@ func writeResponse(w http.ResponseWriter, v float64, err error) {
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Write(js)
-}
-
-type loggingMiddleware struct {
-	logger *zap.Logger
-}
-
-func (lmw *loggingMiddleware) Middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer func(begin time.Time) {
-			lmw.logger.Info(r.RequestURI,
-				zap.Duration("duration", time.Since(begin)))
-		}(time.Now())
-		next.ServeHTTP(w, r)
-	})
 }
