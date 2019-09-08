@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	grpc_logging "github.com/grpc-ecosystem/go-grpc-middleware/logging"
-	"github.com/jwenz723/mathserver/std/pb"
+	"github.com/jwenz723/mathserver/pb"
 	"github.com/jwenz723/mathserver/std/pkg/mathservice"
 )
 

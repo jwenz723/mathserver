@@ -3,7 +3,7 @@ package mathtransport
 import (
 	"context"
 	"errors"
-	"github.com/jwenz723/mathserver/gokit/pb"
+	"github.com/jwenz723/mathserver/pb"
 	"github.com/jwenz723/mathserver/gokit/pkg/mathendpoint"
 	"github.com/jwenz723/mathserver/gokit/pkg/mathservice"
 	"google.golang.org/grpc"

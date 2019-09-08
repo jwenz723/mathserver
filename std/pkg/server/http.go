@@ -3,37 +3,40 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/jwenz723/mathserver/std/pkg/mathservice"
+	"go.uber.org/zap"
 	"net/http"
+	"time"
 )
 
 type httpServer struct {
+	logger *zap.Logger
 	router *mux.Router
 	svc    mathservice.Service
 }
 
-func NewHttpServer(svc mathservice.Service) httpServer {
+func NewHttpRouter(svc mathservice.Service, logger *zap.Logger) *mux.Router {
 	s := httpServer{
+		logger: logger,
 		router: mux.NewRouter(),
 		svc:    svc,
 	}
 	s.routes()
-	return s
-}
-
-func (s *httpServer) Router() *mux.Router {
+	s.addMiddlewares()
 	return s.router
 }
 
 func (s *httpServer) routes() {
-	s.router.Methods("POST").Path("/divide").HandlerFunc(s.divideHandlerFunc())
-	s.router.Methods("POST").Path("/max").HandlerFunc(s.maxHandlerFunc())
-	s.router.Methods("POST").Path("/min").HandlerFunc(s.minHandlerFunc())
-	s.router.Methods("POST").Path("/multiply").HandlerFunc(s.multiplyHandlerFunc())
-	s.router.Methods("POST").Path("/pow").HandlerFunc(s.powHandlerFunc())
-	s.router.Methods("POST").Path("/subtract").HandlerFunc(s.subtractHandlerFunc())
-	s.router.Methods("POST").Path("/sum").HandlerFunc(s.sumHandlerFunc())
+	s.router.Methods("POST").PathPrefix("/").HandlerFunc(s.mathOpHandlerFunc())
+}
+
+func (s *httpServer) addMiddlewares() {
+	lmw := loggingMiddleware{
+		logger: s.logger,
+	}
+	s.router.Use(lmw.Middleware)
 }
 
 // MathOpRequest collects the request parameters for the math methods.
@@ -47,7 +50,8 @@ type MathOpResponse struct {
 	Err error `json:"-"`
 }
 
-func (s *httpServer) divideHandlerFunc() http.HandlerFunc {
+func (s *httpServer) mathOpHandlerFunc() http.HandlerFunc {
+	fmt.Println("setting up math handler")
 	return func(w http.ResponseWriter, r *http.Request) {
 		req, err := decodeRequest(r)
 		if err != nil {
@@ -55,85 +59,24 @@ func (s *httpServer) divideHandlerFunc() http.HandlerFunc {
 			return
 		}
 
-		v, err := s.svc.Divide(context.TODO(), req.A, req.B)
-		writeResponse(w, v, err)
-	}
-}
-
-func (s *httpServer) maxHandlerFunc() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		req, err := decodeRequest(r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		var v float64
+		switch r.URL.Path {
+		case "/divide":
+			v, err = s.svc.Divide(context.TODO(), req.A, req.B)
+		case "/max":
+			v, err = s.svc.Max(context.TODO(), req.A, req.B)
+		case "/min":
+			v, err = s.svc.Min(context.TODO(), req.A, req.B)
+		case "/multiply":
+			v, err = s.svc.Multiply(context.TODO(), req.A, req.B)
+		case "/pow":
+			v, err = s.svc.Pow(context.TODO(), req.A, req.B)
+		case "/subtract":
+			v, err = s.svc.Subtract(context.TODO(), req.A, req.B)
+		case "/sum":
+			v, err = s.svc.Sum(context.TODO(), req.A, req.B)
 		}
 
-		v, err := s.svc.Max(context.TODO(), req.A, req.B)
-		writeResponse(w, v, err)
-	}
-}
-
-func (s *httpServer) minHandlerFunc() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		req, err := decodeRequest(r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		v, err := s.svc.Min(context.TODO(), req.A, req.B)
-		writeResponse(w, v, err)
-	}
-}
-
-func (s *httpServer) multiplyHandlerFunc() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		req, err := decodeRequest(r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		v, err := s.svc.Multiply(context.TODO(), req.A, req.B)
-		writeResponse(w, v, err)
-	}
-}
-
-func (s *httpServer) powHandlerFunc() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		req, err := decodeRequest(r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		v, err := s.svc.Pow(context.TODO(), req.A, req.B)
-		writeResponse(w, v, err)
-	}
-}
-
-func (s *httpServer) subtractHandlerFunc() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		req, err := decodeRequest(r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		v, err := s.svc.Subtract(context.TODO(), req.A, req.B)
-		writeResponse(w, v, err)
-	}
-}
-
-func (s *httpServer) sumHandlerFunc() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		req, err := decodeRequest(r)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		v, err := s.svc.Sum(context.TODO(), req.A, req.B)
 		writeResponse(w, v, err)
 	}
 }
@@ -158,4 +101,18 @@ func writeResponse(w http.ResponseWriter, v float64, err error) {
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Write(js)
+}
+
+type loggingMiddleware struct {
+	logger *zap.Logger
+}
+
+func (lmw *loggingMiddleware) Middleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func(begin time.Time) {
+			lmw.logger.Info(r.RequestURI,
+				zap.Duration("duration", time.Since(begin)))
+		}(time.Now())
+		next.ServeHTTP(w, r)
+	})
 }

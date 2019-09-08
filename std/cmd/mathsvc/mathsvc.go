@@ -6,7 +6,7 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/jwenz723/mathserver/std/pb"
+	"github.com/jwenz723/mathserver/pb"
 	"github.com/jwenz723/mathserver/std/pkg/mathservice"
 	"github.com/jwenz723/mathserver/std/pkg/server"
 	"github.com/oklog/oklog/pkg/group"
@@ -41,7 +41,7 @@ func main() {
 	var (
 		service = mathservice.NewBasicService()
 		grpcSvc = server.NewGrpcServer(service)
-		httpSvc = server.NewHttpServer(service)
+		httpRouter = server.NewHttpRouter(service, logger)
 	)
 
 	var g group.Group
@@ -78,7 +78,7 @@ func main() {
 		g.Add(func() error {
 			logger.Info("starting httpSvc listener",
 				zap.String("addr", *httpAddr))
-			return http.Serve(httpListener, httpSvc.Router())
+			return http.Serve(httpListener, httpRouter)
 		}, func(error) {
 			httpListener.Close()
 		})
