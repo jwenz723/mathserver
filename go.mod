@@ -8,6 +8,7 @@ require (
 	github.com/golang/protobuf v1.3.2
 	github.com/gorilla/mux v1.7.3
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
+	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/oklog/oklog v0.3.2
 	github.com/oklog/run v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.1.0

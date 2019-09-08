@@ -4,14 +4,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/jwenz723/mathserver/gokit/pkg/mathservice"
-	"github.com/jwenz723/mathserver/gokit/pkg/mathtransport"
+	"github.com/go-kit/kit/log"
+	"github.com/jwenz723/mathserver/grpc_and_http/gokit/pkg/mathservice"
+	"github.com/jwenz723/mathserver/grpc_and_http/gokit/pkg/mathtransport"
+	"google.golang.org/grpc"
 	"os"
 	"strconv"
 	"text/tabwriter"
 	"time"
-	"google.golang.org/grpc"
-	"github.com/go-kit/kit/log"
 )
 
 func main() {
@@ -33,8 +33,8 @@ func main() {
 	var (
 		svc mathservice.Service
 		err error
-		op string
-		v float64
+		op  string
+		v   float64
 	)
 	if *httpAddr != "" {
 		svc, err = mathtransport.NewHTTPClient(*httpAddr, log.NewNopLogger())
