@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	grpc_logging "github.com/grpc-ecosystem/go-grpc-middleware/logging"
-	mathservice2 "github.com/jwenz723/mathserver/grpc_only/std/pkg/mathservice"
+	"github.com/jwenz723/mathserver/grpc_only/std/pkg/mathservice"
 	"github.com/jwenz723/mathserver/pb"
 )
 
@@ -13,10 +13,10 @@ var (
 )
 
 type grpcServer struct {
-	svc mathservice2.Service
+	svc mathservice.Service
 }
 
-func NewGrpcServer(svc mathservice2.Service) grpcServer {
+func NewGrpcServer(svc mathservice.Service) grpcServer {
 	return grpcServer{
 		svc: svc,
 	}
@@ -37,8 +37,8 @@ func (s *grpcServer) GrpcLoggingDecider() grpc_logging.ServerPayloadLoggingDecid
 func (s *grpcServer) Divide(ctx context.Context, req *pb.MathOpRequest) (*pb.MathOpReply, error) {
 	v, err := s.svc.Divide(ctx, req.A, req.B)
 	return &pb.MathOpReply{
-		V:                    v,
-		Err:                  err2str(err),
+		V:   v,
+		Err: err2str(err),
 	}, nil
 }
 
@@ -46,8 +46,8 @@ func (s *grpcServer) Divide(ctx context.Context, req *pb.MathOpRequest) (*pb.Mat
 func (s *grpcServer) Max(ctx context.Context, req *pb.MathOpRequest) (*pb.MathOpReply, error) {
 	v, err := s.svc.Max(ctx, req.A, req.B)
 	return &pb.MathOpReply{
-		V:                    v,
-		Err:                  err2str(err),
+		V:   v,
+		Err: err2str(err),
 	}, nil
 }
 
@@ -55,8 +55,8 @@ func (s *grpcServer) Max(ctx context.Context, req *pb.MathOpRequest) (*pb.MathOp
 func (s *grpcServer) Min(ctx context.Context, req *pb.MathOpRequest) (*pb.MathOpReply, error) {
 	v, err := s.svc.Min(ctx, req.A, req.B)
 	return &pb.MathOpReply{
-		V:                    v,
-		Err:                  err2str(err),
+		V:   v,
+		Err: err2str(err),
 	}, nil
 }
 
@@ -64,8 +64,8 @@ func (s *grpcServer) Min(ctx context.Context, req *pb.MathOpRequest) (*pb.MathOp
 func (s *grpcServer) Multiply(ctx context.Context, req *pb.MathOpRequest) (*pb.MathOpReply, error) {
 	v, err := s.svc.Multiply(ctx, req.A, req.B)
 	return &pb.MathOpReply{
-		V:                    v,
-		Err:                  err2str(err),
+		V:   v,
+		Err: err2str(err),
 	}, nil
 }
 
@@ -73,8 +73,8 @@ func (s *grpcServer) Multiply(ctx context.Context, req *pb.MathOpRequest) (*pb.M
 func (s *grpcServer) Pow(ctx context.Context, req *pb.MathOpRequest) (*pb.MathOpReply, error) {
 	v, err := s.svc.Pow(ctx, req.A, req.B)
 	return &pb.MathOpReply{
-		V:                    v,
-		Err:                  err2str(err),
+		V:   v,
+		Err: err2str(err),
 	}, nil
 }
 
@@ -82,8 +82,8 @@ func (s *grpcServer) Pow(ctx context.Context, req *pb.MathOpRequest) (*pb.MathOp
 func (s *grpcServer) Subtract(ctx context.Context, req *pb.MathOpRequest) (*pb.MathOpReply, error) {
 	v, err := s.svc.Subtract(ctx, req.A, req.B)
 	return &pb.MathOpReply{
-		V:                    v,
-		Err:                  err2str(err),
+		V:   v,
+		Err: err2str(err),
 	}, nil
 }
 
@@ -91,8 +91,8 @@ func (s *grpcServer) Subtract(ctx context.Context, req *pb.MathOpRequest) (*pb.M
 func (s *grpcServer) Sum(ctx context.Context, req *pb.MathOpRequest) (*pb.MathOpReply, error) {
 	v, err := s.svc.Sum(ctx, req.A, req.B)
 	return &pb.MathOpReply{
-		V:                    v,
-		Err:                  err2str(err),
+		V:   v,
+		Err: err2str(err),
 	}, nil
 }
 
